@@ -1,11 +1,14 @@
 const axios = require('axios');
 
 module.exports = async function (req, res) {
-  const inputText = req.payload?.inputText; // Safe access
+  const inputText = req.payload?.inputText;
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!inputText) {
-    res.status(400).send({ error: 'Input text is required.' });
+    res.json({
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Input text is required.' }),
+    });
     return;
   }
 
@@ -27,9 +30,16 @@ module.exports = async function (req, res) {
     );
 
     const aiText = openAiResponse.data.choices[0].text.trim();
-    res.send({ response: aiText });
+
+    res.json({
+      statusCode: 200,
+      body: JSON.stringify({ response: aiText }),
+    });
   } catch (error) {
     console.error('Error from OpenAI API:', error.message);
-    res.status(500).send({ error: error.message });
+    res.json({
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message }),
+    });
   }
 };
