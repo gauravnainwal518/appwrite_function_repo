@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 module.exports = async function (req, res) {
-  const { inputText } = req.payload;
+  const inputText = req.payload?.inputText; // Safe access
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!inputText) {
@@ -11,7 +11,7 @@ module.exports = async function (req, res) {
 
   try {
     const openAiResponse = await axios.post(
-      'https://api.openai.com/v1/completions', 
+      'https://api.openai.com/v1/completions',
       {
         model: 'text-davinci-003',
         prompt: inputText,
@@ -20,7 +20,7 @@ module.exports = async function (req, res) {
       },
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
       }
