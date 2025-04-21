@@ -1,54 +1,47 @@
 const axios = require('axios');
 
-module.exports = async function (req, res) {
+module.exports = async ({ req, res, log, error }) => {
+  // 1. Initialize (Appwrite now provides log/error helpers)
   const apiKey = process.env.OPENAI_API_KEY;
+  log('Execution started'); // Proper logging
   
-  // Debug: Log raw request data (critical for troubleshooting)
-  console.log('Raw request data:', {
-    body: req.body,
-    payload: req.payload,
-    headers: req.headers
-  });
-
-  // 1. Handle missing API key
+  // 2. Validate API Key
   if (!apiKey) {
-    console.error('Missing OpenAI API Key');
-    return res.json({
+    error('OpenAI API key missing');
+    return res.json({ 
       statusCode: 500,
-      body: JSON.stringify({ error: 'Server configuration error' })
-    });
+      body: { error: 'Server misconfiguration' }
+    }, 500);
   }
 
-  // 2. Safely extract and parse input
+  // 3. Parse Input (Appwrite-specific method)
   let inputText;
   try {
-    // Priority: req.body > req.payload > raw request
-    const rawData = req.body || req.payload || '{}';
-    const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+    // Appwrite now provides parsed JSON automatically
+    const payload = req.body || {};
+    log(`Raw payload: ${JSON.stringify(payload)}`);
     
-    inputText = data.inputText;
+    inputText = payload.inputText;
     
     if (!inputText) {
-      console.error('Missing inputText in payload:', data);
+      error('Missing inputText');
       return res.json({
         statusCode: 400,
-        body: JSON.stringify({ error: 'Missing required field: inputText' })
-      });
+        body: { error: 'Required field: inputText' }
+      }, 400);
     }
   } catch (err) {
-    console.error('JSON parsing failed:', err.message);
+    error(`Parsing failed: ${err.message}`);
     return res.json({
       statusCode: 400,
-      body: JSON.stringify({ 
-        error: 'Invalid JSON format',
-        solution: 'Send {"inputText":"Your message"} as raw JSON'
-      })
-    });
+      body: { error: 'Send JSON: {"inputText":"Your message"}' }
+    }, 400);
   }
 
-  // 3. Call OpenAI API
+  // 4. Call OpenAI
   try {
-    const response = await axios.post(
+    log(`Calling OpenAI with: ${inputText.substring(0, 50)}...`);
+    const aiResponse = await axios.post(
       'https://api.openai.com/v1/completions',
       {
         model: 'text-davinci-003',
@@ -61,29 +54,25 @@ module.exports = async function (req, res) {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 10000
+        timeout: 8000
       }
     );
 
-    return res.json({
-      statusCode: 200,
-      body: JSON.stringify({ 
-        response: response.data.choices[0]?.text?.trim() 
-      })
-    });
-  } catch (error) {
-    console.error('OpenAI API error:', {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    });
+    const result = aiResponse.data.choices[0]?.text?.trim();
+    log('OpenAI success');
     
     return res.json({
-      statusCode: error.response?.status || 500,
-      body: JSON.stringify({
-        error: 'OpenAI API request failed',
-        details: error.response?.data || error.message
-      })
+      statusCode: 200,
+      body: { response: result }
     });
+  } catch (err) {
+    error(`OpenAI error: ${err.response?.data || err.message}`);
+    return res.json({
+      statusCode: err.response?.status || 502,
+      body: { 
+        error: 'AI service unavailable',
+        details: err.response?.data || err.message
+      }
+    }, err.response?.status || 502);
   }
 };
