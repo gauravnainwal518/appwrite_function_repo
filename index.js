@@ -1,78 +1,56 @@
 const axios = require('axios');
 
-module.exports = async function ({ req, res, log, error }) {
-  // 1. Initialize (Appwrite now provides log/error helpers)
+module.exports = async ({ req, res, log, error }) => {
   const apiKey = process.env.OPENAI_API_KEY;
-  log('Execution started'); // Proper logging
+  log('Execution started');
 
-  // 2. Validate API Key
   if (!apiKey) {
-    error('OpenAI API key missing');
-    return res.json({ 
-      statusCode: 500,
-      body: { error: 'Server misconfiguration' }
-    }, 500);
+    error('Missing OpenAI API key');
+    return res.json({ error: 'Server misconfiguration' }, 500);
   }
 
-  // 3. Parse Input (Appwrite-specific method)
   let inputText;
   try {
-    // Appwrite now provides parsed JSON automatically
-    const payload = req.body || {};
-    log(`Raw payload: ${JSON.stringify(payload)}`);
-    
+    const payloadRaw = req.payload;
+    log(`Raw payload: ${payloadRaw}`);
+
+    const payload = JSON.parse(payloadRaw || '{}');
     inputText = payload.inputText;
 
     if (!inputText) {
       error('Missing inputText');
-      return res.json({
-        statusCode: 400,
-        body: { error: 'Required field: inputText' }
-      }, 400);
+      return res.json({ error: 'Required field: inputText' }, 400);
     }
   } catch (err) {
-    error(`Parsing failed: ${err.message}`);
-    return res.json({
-      statusCode: 400,
-      body: { error: 'Send JSON: {"inputText":"Your message"}' }
-    }, 400);
+    error(`JSON parse error: ${err.message}`);
+    return res.json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  // 4. Call OpenAI
   try {
-    log(`Calling OpenAI with: ${inputText.substring(0, 50)}...`);
     const aiResponse = await axios.post(
       'https://api.openai.com/v1/completions',
       {
         model: 'text-davinci-003',
         prompt: inputText,
         max_tokens: 100,
-        temperature: 0.7
+        temperature: 0.7,
       },
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
         },
-        timeout: 8000
+        timeout: 8000,
       }
     );
 
     const result = aiResponse.data.choices[0]?.text?.trim();
-    log('OpenAI success');
-    
-    return res.json({
-      statusCode: 200,
-      body: { response: result }
-    });
+    return res.json({ response: result }, 200);
   } catch (err) {
-    error(`OpenAI error: ${err.response?.data || err.message}`);
+    error(`OpenAI error: ${err.message}`);
     return res.json({
-      statusCode: err.response?.status || 502,
-      body: { 
-        error: 'AI service unavailable',
-        details: err.response?.data || err.message
-      }
-    }, err.response?.status || 502);
+      error: 'AI service error',
+      details: err.message,
+    }, 502);
   }
 };
