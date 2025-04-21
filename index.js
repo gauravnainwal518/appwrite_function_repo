@@ -2,88 +2,88 @@ const axios = require('axios');
 
 module.exports = async function (req, res) {
   const apiKey = process.env.OPENAI_API_KEY;
+  
+  // Debug: Log raw request data (critical for troubleshooting)
+  console.log('Raw request data:', {
+    body: req.body,
+    payload: req.payload,
+    headers: req.headers
+  });
 
-  // Debug: Log full request object (for troubleshooting)
-  console.log('Full Request Object:', JSON.stringify(req, null, 2));
-
-  // Check if OpenAI API key exists
+  // 1. Handle missing API key
   if (!apiKey) {
-    console.error('OpenAI API Key is missing!');
+    console.error('Missing OpenAI API Key');
     return res.json({
       statusCode: 500,
-      body: JSON.stringify({ error: 'Server misconfiguration: OpenAI API key not set.' }),
+      body: JSON.stringify({ error: 'Server configuration error' })
     });
   }
 
+  // 2. Safely extract and parse input
   let inputText;
-  let payload = {};
-
-  // Parse incoming data (handle both req.body and req.payload)
   try {
-    if (req.body) {
-      payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    } else if (req.payload) {
-      payload = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
-    } else {
-      console.error('No valid payload found in request.');
+    // Priority: req.body > req.payload > raw request
+    const rawData = req.body || req.payload || '{}';
+    const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+    
+    inputText = data.inputText;
+    
+    if (!inputText) {
+      console.error('Missing inputText in payload:', data);
       return res.json({
         statusCode: 400,
-        body: JSON.stringify({ error: 'No input data provided.' }),
+        body: JSON.stringify({ error: 'Missing required field: inputText' })
       });
     }
-
-    inputText = payload.inputText;
-    console.log('Parsed Payload:', payload);
   } catch (err) {
-    console.error('Payload parsing failed:', err.message);
+    console.error('JSON parsing failed:', err.message);
     return res.json({
       statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid JSON format. Send { "inputText": "your text" }' }),
+      body: JSON.stringify({ 
+        error: 'Invalid JSON format',
+        solution: 'Send {"inputText":"Your message"} as raw JSON'
+      })
     });
   }
 
-  // Validate input
-  if (!inputText || typeof inputText !== 'string') {
-    console.error('Invalid inputText:', inputText);
-    return res.json({
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Valid "inputText" string is required.' }),
-    });
-  }
-
-  // Call OpenAI API
+  // 3. Call OpenAI API
   try {
-    const openAiResponse = await axios.post(
+    const response = await axios.post(
       'https://api.openai.com/v1/completions',
       {
-        model: 'text-davinci-003', // Consider updating to newer models like gpt-3.5-turbo
+        model: 'text-davinci-003',
         prompt: inputText,
         max_tokens: 100,
-        temperature: 0.7,
+        temperature: 0.7
       },
       {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        timeout: 10000, // 10-second timeout
+        timeout: 10000
       }
     );
 
-    const aiText = openAiResponse.data.choices[0]?.text?.trim() || 'No response from AI.';
-    
     return res.json({
       statusCode: 200,
-      body: JSON.stringify({ response: aiText }),
+      body: JSON.stringify({ 
+        response: response.data.choices[0]?.text?.trim() 
+      })
     });
   } catch (error) {
-    console.error('OpenAI API Error:', error.response?.data || error.message);
+    console.error('OpenAI API error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    
     return res.json({
       statusCode: error.response?.status || 500,
-      body: JSON.stringify({ 
-        error: 'OpenAI API failed',
-        details: error.response?.data || error.message 
-      }),
+      body: JSON.stringify({
+        error: 'OpenAI API request failed',
+        details: error.response?.data || error.message
+      })
     });
   }
 };
