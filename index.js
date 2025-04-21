@@ -1,10 +1,10 @@
 const axios = require('axios');
 
-module.exports = async ({ req, res, log, error }) => {
+module.exports = async function ({ req, res, log, error }) {
   // 1. Initialize (Appwrite now provides log/error helpers)
   const apiKey = process.env.OPENAI_API_KEY;
   log('Execution started'); // Proper logging
-  
+
   // 2. Validate API Key
   if (!apiKey) {
     error('OpenAI API key missing');
@@ -22,7 +22,7 @@ module.exports = async ({ req, res, log, error }) => {
     log(`Raw payload: ${JSON.stringify(payload)}`);
     
     inputText = payload.inputText;
-    
+
     if (!inputText) {
       error('Missing inputText');
       return res.json({
