@@ -1,16 +1,19 @@
 const axios = require('axios');
 
 module.exports = async function (req, res) {
-  let inputText;
   const apiKey = process.env.OPENAI_API_KEY;
 
-  // Log the OpenAI API key to verify it's being accessed
   console.log('OpenAI API Key:', apiKey);
+  console.log('Incoming Request Body:', req.body);
+  console.log('Request Headers:', req.headers);
+
+  let inputText;
 
   try {
-    const payload = JSON.parse(req.payload || '{}');
-    inputText = payload.inputText;
+    const payload = req.body; // Use req.body instead of req.payload
+    inputText = payload?.inputText;
   } catch (err) {
+    console.error('Payload parsing failed:', err.message);
     return res.json({
       statusCode: 400,
       body: JSON.stringify({ error: 'Invalid payload format.' }),
@@ -18,6 +21,7 @@ module.exports = async function (req, res) {
   }
 
   if (!inputText) {
+    console.log('Input text is missing!');
     return res.json({
       statusCode: 400,
       body: JSON.stringify({ error: 'Input text is required.' }),
