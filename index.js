@@ -1,33 +1,43 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
+  const apiKey = process.env.OPENAI_API_KEY;
   log('Execution started');
 
-  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     error('OpenAI API key missing');
-    return res.json({ error: 'Server misconfiguration' }, 500);
+    return res.json({
+      statusCode: 500,
+      body: { error: 'Server misconfiguration' }
+    }, 500);
   }
 
+  // 👇 Change made here
   let inputText;
   try {
-    const raw = req.payload;
-    log('Raw payload:', raw);
-
-    const parsed = JSON.parse(raw || '{}');
-    inputText = parsed.inputText;
+    const payload = JSON.parse(req.payload || '{}'); // <-- KEY FIX
+    log(`Raw payload: ${JSON.stringify(payload)}`);
+    
+    inputText = payload.inputText;
 
     if (!inputText) {
       error('Missing inputText');
-      return res.json({ error: 'Required field: inputText' }, 400);
+      return res.json({
+        statusCode: 400,
+        body: { error: 'Required field: inputText' }
+      }, 400);
     }
   } catch (err) {
-    error('Invalid JSON:', err.message);
-    return res.json({ error: 'Invalid JSON format.' }, 400);
+    error(`Parsing failed: ${err.message}`);
+    return res.json({
+      statusCode: 400,
+      body: { error: 'Send JSON: {"inputText":"Your message"}' }
+    }, 400);
   }
 
   try {
-    const response = await axios.post(
+    log(`Calling OpenAI with: ${inputText.substring(0, 50)}...`);
+    const aiResponse = await axios.post(
       'https://api.openai.com/v1/completions',
       {
         model: 'text-davinci-003',
@@ -37,16 +47,28 @@ module.exports = async ({ req, res, log, error }) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 8000
       }
     );
 
-    const result = response.data.choices[0]?.text?.trim();
-    return res.json({ response: result }, 200);
+    const result = aiResponse.data.choices[0]?.text?.trim();
+    log('OpenAI success');
+    
+    return res.json({
+      statusCode: 200,
+      body: { response: result }
+    });
   } catch (err) {
-    error('OpenAI API failed:', err.message);
-    return res.json({ error: 'Failed to contact OpenAI', details: err.message }, 500);
+    error(`OpenAI error: ${err.response?.data || err.message}`);
+    return res.json({
+      statusCode: err.response?.status || 502,
+      body: {
+        error: 'AI service unavailable',
+        details: err.response?.data || err.message
+      }
+    }, err.response?.status || 502);
   }
 };
