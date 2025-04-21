@@ -5,11 +5,14 @@ module.exports = async function (req, res) {
 
   // Log the incoming payload for debugging
   console.log('Incoming Payload:', req.payload);
+  console.log('Request Headers:', req.headers);
 
   // Access inputText from payload
   const inputText = req.payload?.inputText;
 
+  // Check if inputText is provided
   if (!inputText) {
+    console.error('Input text is missing!');
     return res.json({
       statusCode: 400,
       body: JSON.stringify({ error: 'Input text is required.' }),
@@ -36,11 +39,13 @@ module.exports = async function (req, res) {
 
     const aiText = openAiResponse.data.choices[0].text.trim();
 
+    // Return AI response
     res.json({
       statusCode: 200,
       body: JSON.stringify({ response: aiText }),
     });
   } catch (error) {
+    // Handle API errors
     console.error('Error from OpenAI API:', error.message);
     res.json({
       statusCode: 500,
