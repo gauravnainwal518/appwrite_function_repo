@@ -1,15 +1,24 @@
 const axios = require('axios');
 
 module.exports = async function (req, res) {
-  const inputText = req.payload?.inputText;
+  let inputText;
   const apiKey = process.env.OPENAI_API_KEY;
 
+  try {
+    const payload = JSON.parse(req.payload || '{}');
+    inputText = payload.inputText;
+  } catch (err) {
+    return res.json({
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Invalid payload format.' }),
+    });
+  }
+
   if (!inputText) {
-    res.json({
+    return res.json({
       statusCode: 400,
       body: JSON.stringify({ error: 'Input text is required.' }),
     });
-    return;
   }
 
   try {
