@@ -4,16 +4,16 @@ module.exports = async function (req, res) {
   const apiKey = process.env.OPENAI_API_KEY;
 
   console.log('OpenAI API Key:', apiKey);
-  console.log('Incoming Request Body:', req.body);
+  console.log('Incoming Payload (raw):', req.payload);
   console.log('Request Headers:', req.headers);
 
   let inputText;
 
   try {
-    const payload = req.body; // Use req.body instead of req.payload
-    inputText = payload?.inputText;
+    const payload = JSON.parse(req.payload || '{}');
+    inputText = payload.inputText;
   } catch (err) {
-    console.error('Payload parsing failed:', err.message);
+    console.error('Failed to parse payload:', err.message);
     return res.json({
       statusCode: 400,
       body: JSON.stringify({ error: 'Invalid payload format.' }),
