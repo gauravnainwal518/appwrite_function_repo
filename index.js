@@ -3,12 +3,12 @@ const axios = require('axios');
 module.exports = async function (req, res) {
   const apiKey = process.env.OPENAI_API_KEY;
 
-  // Log the incoming payload for debugging
-  console.log('Incoming Payload:', req.payload);
+  // Log incoming request body and headers for debugging
+  console.log('Incoming Request Body:', req.body);
   console.log('Request Headers:', req.headers);
 
-  // Access inputText from payload
-  const inputText = req.payload?.inputText;
+  // Get inputText from either payload or body
+  const inputText = req.body?.inputText || req.payload?.inputText;
 
   // Check if inputText is provided
   if (!inputText) {
