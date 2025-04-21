@@ -1,18 +1,13 @@
 const axios = require('axios');
 
 module.exports = async function (req, res) {
-  let inputText;
   const apiKey = process.env.OPENAI_API_KEY;
 
-  try {
-    const payload = JSON.parse(req.payload || '{}');
-    inputText = payload.inputText;
-  } catch (err) {
-    return res.json({
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid payload format.' }),
-    });
-  }
+  // Log the incoming payload for debugging
+  console.log('Incoming Payload:', req.payload);
+
+  // Access inputText from payload
+  const inputText = req.payload?.inputText;
 
   if (!inputText) {
     return res.json({
@@ -22,6 +17,7 @@ module.exports = async function (req, res) {
   }
 
   try {
+    // Send request to OpenAI API
     const openAiResponse = await axios.post(
       'https://api.openai.com/v1/completions',
       {
