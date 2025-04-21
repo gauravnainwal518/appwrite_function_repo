@@ -7,7 +7,7 @@ module.exports = async function (req, res) {
   console.log('Incoming Request Body:', req.body);
   console.log('Request Headers:', req.headers);
 
-  // Get inputText from either payload or body
+  // Get inputText from request body or payload
   const inputText = req.body?.inputText || req.payload?.inputText;
 
   // Check if inputText is provided
