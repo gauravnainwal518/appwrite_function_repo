@@ -1,32 +1,26 @@
 const axios = require('axios');
 
-module.exports = async function (req, res) {
+module.exports = async function (context) {
   const apiKey = process.env.OPENAI_API_KEY;
 
-  // Debug logs
-  console.log('🔐 OpenAI API Key:', apiKey ? '✅ Present' : '❌ Missing');
-  console.log('📦 Incoming Payload (raw):', req.bodyRaw);
-  console.log('🧾 Request Headers:', req.headers);
+  // Logs
+  context.log('🔐 OpenAI API Key:', apiKey ? '✅ Present' : '❌ Missing');
+  context.log('📦 Incoming Payload (raw):', context.req.bodyRaw);
+  context.log('🧾 Request Headers:', context.req.headers);
 
   let inputText;
 
   try {
-    const payload = JSON.parse(req.bodyRaw || '{}');
+    const payload = JSON.parse(context.req.bodyRaw || '{}');
     inputText = payload.inputText;
   } catch (err) {
-    console.error('❌ Failed to parse payload:', err.message);
-    return res.json({
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid payload format.' }),
-    });
+    context.error('❌ Failed to parse payload:', err.message);
+    return context.res.send(JSON.stringify({ error: 'Invalid payload format.' }), 400);
   }
 
   if (!inputText) {
-    console.log('⚠️ Input text is missing!');
-    return res.json({
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Input text is required.' }),
-    });
+    context.log('⚠️ Input text is missing!');
+    return context.res.send(JSON.stringify({ error: 'Input text is required.' }), 400);
   }
 
   try {
@@ -48,17 +42,11 @@ module.exports = async function (req, res) {
 
     const aiText = openAiResponse.data.choices[0].text.trim();
 
-    console.log('✅ OpenAI Response:', aiText);
+    context.log('✅ OpenAI Response:', aiText);
 
-    res.json({
-      statusCode: 200,
-      body: JSON.stringify({ response: aiText }),
-    });
+    return context.res.send(JSON.stringify({ response: aiText }), 200);
   } catch (error) {
-    console.error('❌ Error from OpenAI API:', error.message);
-    res.json({
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    });
+    context.error('❌ Error from OpenAI API:', error.message);
+    return context.res.send(JSON.stringify({ error: error.message }), 500);
   }
 };
