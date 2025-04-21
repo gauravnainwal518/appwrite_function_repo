@@ -1,56 +1,52 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  const apiKey = process.env.OPENAI_API_KEY;
   log('Execution started');
 
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    error('Missing OpenAI API key');
+    error('OpenAI API key missing');
     return res.json({ error: 'Server misconfiguration' }, 500);
   }
 
   let inputText;
   try {
-    const payloadRaw = req.payload;
-    log(`Raw payload: ${payloadRaw}`);
+    const raw = req.payload;
+    log('Raw payload:', raw);
 
-    const payload = JSON.parse(payloadRaw || '{}');
-    inputText = payload.inputText;
+    const parsed = JSON.parse(raw || '{}');
+    inputText = parsed.inputText;
 
     if (!inputText) {
       error('Missing inputText');
       return res.json({ error: 'Required field: inputText' }, 400);
     }
   } catch (err) {
-    error(`JSON parse error: ${err.message}`);
-    return res.json({ error: 'Invalid JSON body.' }, 400);
+    error('Invalid JSON:', err.message);
+    return res.json({ error: 'Invalid JSON format.' }, 400);
   }
 
   try {
-    const aiResponse = await axios.post(
+    const response = await axios.post(
       'https://api.openai.com/v1/completions',
       {
         model: 'text-davinci-003',
         prompt: inputText,
         max_tokens: 100,
-        temperature: 0.7,
+        temperature: 0.7
       },
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 8000,
+          'Content-Type': 'application/json'
+        }
       }
     );
 
-    const result = aiResponse.data.choices[0]?.text?.trim();
+    const result = response.data.choices[0]?.text?.trim();
     return res.json({ response: result }, 200);
   } catch (err) {
-    error(`OpenAI error: ${err.message}`);
-    return res.json({
-      error: 'AI service error',
-      details: err.message,
-    }, 502);
+    error('OpenAI API failed:', err.message);
+    return res.json({ error: 'Failed to contact OpenAI', details: err.message }, 500);
   }
 };
