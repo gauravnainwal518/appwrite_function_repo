@@ -66,7 +66,8 @@ module.exports = async ({ req, res, log, error }) => {
       body: { response: result }
     });
   } catch (err) {
-    error(`OpenAI error: ${err.response?.data || err.message}`);
+    // Improved error handling to log the full error response
+    error(`OpenAI error: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
     return res.json({
       statusCode: err.response?.status || 502,
       body: { 
