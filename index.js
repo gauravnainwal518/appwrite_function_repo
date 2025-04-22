@@ -1,28 +1,24 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  // 1. Initialize (Appwrite now provides log/error helpers)
-  const apiKey = process.env.OPENAI_API_KEY;
-  log('Execution started'); // Proper logging
-  
-  // 2. Validate API Key
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  log('Execution started');
+
   if (!apiKey) {
-    error('OpenAI API key missing');
-    return res.json({ 
+    error('OpenRouter API key missing');
+    return res.json({
       statusCode: 500,
       body: { error: 'Server misconfiguration' }
     }, 500);
   }
 
-  // 3. Parse Input (Appwrite-specific method)
   let inputText;
   try {
-    // Appwrite now provides parsed JSON automatically
     const payload = req.body || {};
     log(`Raw payload: ${JSON.stringify(payload)}`);
     
     inputText = payload.inputText;
-    
+
     if (!inputText) {
       error('Missing inputText');
       return res.json({
@@ -38,13 +34,12 @@ module.exports = async ({ req, res, log, error }) => {
     }, 400);
   }
 
-  // 4. Call OpenAI (Updated endpoint for newer versions)
   try {
-    log(`Calling OpenAI with: ${inputText.substring(0, 50)}...`);
+    log(`Calling OpenRouter with: ${inputText.substring(0, 50)}...`);
     const aiResponse = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'gpt-3.5-turbo', // or gpt-4 depending on your use case
+        model: 'mistralai/mixtral-8x7b',
         messages: [{ role: 'user', content: inputText }],
         max_tokens: 100,
         temperature: 0.7
@@ -52,25 +47,24 @@ module.exports = async ({ req, res, log, error }) => {
       {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         timeout: 8000
       }
     );
 
     const result = aiResponse.data.choices[0]?.message?.content?.trim();
-    log('OpenAI success');
-    
+    log('OpenRouter success');
+
     return res.json({
       statusCode: 200,
       body: { response: result }
     });
   } catch (err) {
-    // Improved error handling to log the full error response
-    error(`OpenAI error: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
+    error(`OpenRouter error: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
     return res.json({
       statusCode: err.response?.status || 502,
-      body: { 
+      body: {
         error: 'AI service unavailable',
         details: err.response?.data || err.message
       }
