@@ -12,27 +12,29 @@ module.exports = async ({ req, res, log, error }) => {
     }, 500);
   }
 
-  let inputText;
-  try {
-    const payload = req.body || {};
-    log(`Raw payload: ${JSON.stringify(payload)}`);
-    
-    inputText = payload.inputText;
+ let inputText;
+try {
+  const rawBody = req.body || "";
+  log(`Raw body: ${rawBody}`);
 
-    if (!inputText) {
-      error('Missing inputText');
-      return res.json({
-        statusCode: 400,
-        body: { error: 'Required field: inputText' }
-      }, 400);
-    }
-  } catch (err) {
-    error(`Parsing failed: ${err.message}`);
+  const payload = JSON.parse(rawBody); // ⬅️ this is the fix
+  inputText = payload.inputText;
+
+  if (!inputText) {
+    error('Missing inputText');
     return res.json({
       statusCode: 400,
-      body: { error: 'Send JSON: {"inputText":"Your message"}' }
+      body: { error: 'Required field: inputText' }
     }, 400);
   }
+} catch (err) {
+  error(`Parsing failed: ${err.message}`);
+  return res.json({
+    statusCode: 400,
+    body: { error: 'Send JSON: {\"inputText\":\"Your message\"}' }
+  }, 400);
+}
+
 
   try {
     log(`Calling Gemini with: ${inputText.substring(0, 50)}...`);
