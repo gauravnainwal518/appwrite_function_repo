@@ -1,11 +1,11 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   log('Execution started');
 
   if (!apiKey) {
-    error('OpenRouter API key missing');
+    error('Gemini API key missing');
     return res.json({
       statusCode: 500,
       body: { error: 'Server misconfiguration' }
@@ -35,33 +35,34 @@ module.exports = async ({ req, res, log, error }) => {
   }
 
   try {
-    log(`Calling OpenRouter with: ${inputText.substring(0, 50)}...`);
-    const aiResponse = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
+    log(`Calling Gemini with: ${inputText.substring(0, 50)}...`);
+
+    const geminiResponse = await axios.post(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + apiKey,
       {
-        model: 'mistralai/mixtral-8x7b',
-        messages: [{ role: 'user', content: inputText }],
-        max_tokens: 100,
-        temperature: 0.7
+        contents: [
+          {
+            parts: [{ text: inputText }],
+          },
+        ],
       },
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         timeout: 8000
       }
     );
 
-    const result = aiResponse.data.choices[0]?.message?.content?.trim();
-    log('OpenRouter success');
+    const result = geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
+    log('Gemini success');
     return res.json({
       statusCode: 200,
-      body: { response: result }
+      body: { response: result || 'No content generated.' }
     });
   } catch (err) {
-    error(`OpenRouter error: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
+    error(`Gemini error: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
     return res.json({
       statusCode: err.response?.status || 502,
       body: {
