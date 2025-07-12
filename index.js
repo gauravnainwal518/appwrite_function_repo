@@ -4,66 +4,38 @@ module.exports = async ({ req, res, log, error }) => {
   log(" Function started");
 
   const apiKey = process.env.GEMINI_API_KEY;
+  const inputText = req.body.inputText;
 
   if (!apiKey) {
-    error('Gemini API key missing');
-    return res.json({
-      statusCode: 500,
-      body: { error: 'Server misconfiguration' }
-    }, 500);
-  }
-
-  let inputText;
-  try {
-    log("BODY RAW: " + req.body);
-
-    const payload = JSON.parse(req.body); // parse raw string
-    inputText = payload.inputText;
-
-    if (!inputText) {
-      error('Missing inputText');
-      return res.json({
-        statusCode: 400,
-        body: { error: 'Required field: inputText' }
-      }, 400);
-    }
-  } catch (err) {
-    error(`Parsing failed: ${err.message}`);
-    return res.json({
-      statusCode: 400,
-      body: { error: 'Send JSON: {\"inputText\":\"Your message\"}' }
-    }, 400);
+    error(" Gemini API key missing");
+    return res.status(500).json({ message: "Gemini API key not set." });
   }
 
   try {
-    log(`Calling Gemini with: ${inputText.substring(0, 50)}...`);
+    log(`Calling Gemini Flash with: ${inputText}`);
 
-    // Correct Gemini API endpoint
-    const geminiResponse = await axios.post(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
-        contents: [{ parts: [{ text: inputText }] }],
+        contents: [{ parts: [{ text: inputText }] }]
       },
       {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 8000
+        headers: {
+          "Content-Type": "application/json"
+        }
       }
     );
 
-    const result = geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const generatedText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || " No content generated.";
+    return res.json({ output: generatedText });
 
-    return res.json({
-      statusCode: 200,
-      body: { response: result || 'No content generated.' }
-    });
   } catch (err) {
-    error(`Gemini error: ${err.message}`);
-    return res.json({
-      statusCode: err.response?.status || 502,
-      body: {
-        error: 'AI service unavailable',
-        details: err.response?.data || err.message
-      }
-    }, err.response?.status || 502);
+    error("❌ Gemini API Error:", err.message || err);
+    log(" Error details:", err.response?.data || err);
+    return res.status(500).json({
+      message: "Error calling Gemini Flash",
+      error: err.message,
+      details: err.response?.data
+    });
   }
 };
