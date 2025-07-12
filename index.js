@@ -1,5 +1,5 @@
-module.exports = async ({ req, res, log, error }) => {
-  log("Test Function Triggered");
+module.exports = async ({ req, res, log }) => {
+  log("Returning dummy output from function");
 
   return res.json({
     statusCode: 200,
