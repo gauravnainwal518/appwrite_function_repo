@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 module.exports = async ({ req, log, error }) => {
-  log("🚀 Function started");
+  log(" Function started");
 
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -18,29 +18,23 @@ module.exports = async ({ req, log, error }) => {
       throw new Error("Missing or invalid inputText");
     }
 
-    log("✅ Parsed inputText:", inputText);
+    log(" Parsed inputText:", inputText);
   } catch (err) {
-    error("❌ Failed to parse input body:", err.message);
-    log("🪵 Raw req.body:", JSON.stringify(req.body));
-    return JSON.stringify({
-      statusCode: 400,
-      message: "Failed to parse input body or missing inputText"
-    });
+    error(" Failed to parse input body:", err.message);
+    log(" Raw req.body:", JSON.stringify(req.body));
+    return " Invalid input. Make sure to send valid JSON with 'inputText'";
   }
 
   // Step 2: Check for API Key
   if (!apiKey) {
-    error("❌ Gemini API key is missing");
-    return JSON.stringify({
-      statusCode: 500,
-      message: "Gemini API key is not set in environment variables"
-    });
+    error(" Gemini API key is missing");
+    return " Gemini API key not set in environment variables";
   }
 
   // Step 3: Call Gemini API
   let generatedText = "";
   try {
-    log("📡 Calling Gemini Flash API...");
+    log(" Calling Gemini Flash API...");
 
     const geminiResponse = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -55,32 +49,20 @@ module.exports = async ({ req, log, error }) => {
     generatedText =
       geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "No content generated.";
 
-    log("✅ Gemini response received");
+    log(" Gemini response received");
   } catch (err) {
-    error("❌ Gemini API Error:", err.message || err);
-    log("🪵 Error details:", JSON.stringify(err.response?.data || err));
-    return JSON.stringify({
-      statusCode: 500,
-      message: "Error calling Gemini Flash",
-      error: err.message,
-      details: err.response?.data || null
-    });
+    error(" Gemini API Error:", err.message || err);
+    log(" Error details:", JSON.stringify(err.response?.data || err));
+    return " Gemini API error occurred. Check logs for details.";
   }
 
-  // Step 4: Return cleaned, safe output
+  // Step 4: Return clean response (string only, for Appwrite Console compatibility)
   try {
-    const cleanOutput = generatedText.replace(/[^\x20-\x7E]+/g, ''); // remove non-printable chars
-    log("📤 Returning clean response to Appwrite:", cleanOutput);
-
-    return JSON.stringify({
-      statusCode: 200,
-      output: cleanOutput
-    });
+    const cleanOutput = generatedText.replace(/[^\x20-\x7E]+/g, ''); // remove non-printables
+    log(" Output sent:", cleanOutput);
+    return cleanOutput;
   } catch (e) {
-    error("❌ Failed to stringify output:", e.message);
-    return JSON.stringify({
-      statusCode: 500,
-      message: "Failed to stringify Gemini output"
-    });
+    error(" Failed to clean output:", e.message);
+    return " Error while formatting output.";
   }
 };
