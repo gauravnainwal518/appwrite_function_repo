@@ -1,9 +1,11 @@
 const axios = require('axios');
 
-module.exports = async ({ req, res, log, error }) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+const axios = require('axios');
 
-  log("Execution started");
+module.exports = async ({ req, res, log, error }) => {
+  log("🔥 Function started"); // <-- force this log to verify deployment
+
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     error('Gemini API key missing');
@@ -12,6 +14,7 @@ module.exports = async ({ req, res, log, error }) => {
       body: { error: 'Server misconfiguration' }
     }, 500);
   }
+
 
   let inputText;
   try {
