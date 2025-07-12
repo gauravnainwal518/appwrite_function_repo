@@ -4,16 +4,22 @@ module.exports = async ({ req, res, log, error }) => {
   log(" Function started");
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const inputText = req.body.inputText;
+  const inputText = req.body?.inputText;
+
+  log(" Request Body:", JSON.stringify(req.body));
+  log(" Calling Gemini Flash with:", inputText);
 
   if (!apiKey) {
     error(" Gemini API key missing");
-    return res.status(500).json({ message: "Gemini API key not set." });
+    return res.json({ statusCode: 500, message: "Gemini API key not set." });
+  }
+
+  if (!inputText || typeof inputText !== "string") {
+    error(" Invalid or missing inputText");
+    return res.json({ statusCode: 400, message: "Missing or invalid inputText" });
   }
 
   try {
-    log(`Calling Gemini Flash with: ${inputText}`);
-
     const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
@@ -26,16 +32,19 @@ module.exports = async ({ req, res, log, error }) => {
       }
     );
 
-    const generatedText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || " No content generated.";
-    return res.json({ output: generatedText });
+    const generatedText =
+      response.data.candidates?.[0]?.content?.parts?.[0]?.text || " No content generated.";
+
+    return res.json({ statusCode: 200, output: generatedText });
 
   } catch (err) {
-    error("❌ Gemini API Error:", err.message || err);
-    log(" Error details:", err.response?.data || err);
-    return res.status(500).json({
+    error(" Gemini API Error:", err.message || err);
+    log(" Error details:", JSON.stringify(err.response?.data || err));
+    return res.json({
+      statusCode: 500,
       message: "Error calling Gemini Flash",
       error: err.message,
-      details: err.response?.data
+      details: err.response?.data || null
     });
   }
 };
