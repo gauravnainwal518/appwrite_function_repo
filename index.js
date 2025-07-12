@@ -1,9 +1,7 @@
-
-
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  log("🔥 Function started"); // <-- force this log to verify deployment
+  log(" Function started");
 
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -15,12 +13,11 @@ module.exports = async ({ req, res, log, error }) => {
     }, 500);
   }
 
-
   let inputText;
   try {
-    log("BODY RAW: " + req.body); // 👈 ADD THIS FOR DEBUGGING
+    log("BODY RAW: " + req.body);
 
-    const payload = JSON.parse(req.body); // important: parse req.body manually
+    const payload = JSON.parse(req.body); // parse raw string
     inputText = payload.inputText;
 
     if (!inputText) {
@@ -41,8 +38,9 @@ module.exports = async ({ req, res, log, error }) => {
   try {
     log(`Calling Gemini with: ${inputText.substring(0, 50)}...`);
 
+    // Correct Gemini API endpoint
     const geminiResponse = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
       {
         contents: [{ parts: [{ text: inputText }] }],
       },
