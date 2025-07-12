@@ -38,6 +38,7 @@ module.exports = async ({ req, log, error }) => {
   }
 
   // Step 3: Call Gemini API
+  let generatedText = "";
   try {
     log("📡 Calling Gemini Flash API...");
 
@@ -51,16 +52,10 @@ module.exports = async ({ req, log, error }) => {
       }
     );
 
-    const generatedText =
+    generatedText =
       geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "No content generated.";
 
     log("✅ Gemini response received");
-
-    return JSON.stringify({
-      statusCode: 200,
-      output: generatedText
-    });
-
   } catch (err) {
     error("❌ Gemini API Error:", err.message || err);
     log("🪵 Error details:", JSON.stringify(err.response?.data || err));
@@ -69,6 +64,23 @@ module.exports = async ({ req, log, error }) => {
       message: "Error calling Gemini Flash",
       error: err.message,
       details: err.response?.data || null
+    });
+  }
+
+  // Step 4: Return cleaned, safe output
+  try {
+    const cleanOutput = generatedText.replace(/[^\x20-\x7E]+/g, ''); // remove non-printable chars
+    log("📤 Returning clean response to Appwrite:", cleanOutput);
+
+    return JSON.stringify({
+      statusCode: 200,
+      output: cleanOutput
+    });
+  } catch (e) {
+    error("❌ Failed to stringify output:", e.message);
+    return JSON.stringify({
+      statusCode: 500,
+      message: "Failed to stringify Gemini output"
     });
   }
 };
