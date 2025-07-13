@@ -7,32 +7,29 @@ module.exports = async ({ req, log, error }) => {
 
   // Step 1: Parse input safely
   let inputText;
-  try {
-    let body = req.body;
+try {
+  let body = req.body;
 
-    if (typeof body === "string") {
-      log("Parsing body from string");
-      body = JSON.parse(body);
+  if (typeof body === "string") {
+    if (body.trim() === "") {
+      throw new Error("Empty request body received");
     }
-
-    inputText = body?.inputText;
-
-    if (!inputText || typeof inputText !== "string") {
-      throw new Error("Missing or invalid inputText");
-    }
-
-    log("Parsed inputText:", inputText);
-  } catch (err) {
-    error("Failed to parse input body:", err.message);
-    log("Raw req.body:", JSON.stringify(req.body));
-    return JSON.stringify({ error: "Invalid input. Expecting JSON with 'inputText'" });
+    log("Parsing body from string");
+    body = JSON.parse(body);
   }
 
-  // Step 2: Check for API Key
-  if (!apiKey) {
-    error("Gemini API key is missing");
-    return JSON.stringify({ error: "Gemini API key not set in environment variables" });
+  inputText = body?.inputText;
+
+  if (!inputText || typeof inputText !== "string") {
+    throw new Error("Missing or invalid inputText");
   }
+
+  log("Parsed inputText:", inputText);
+} catch (err) {
+  error("Failed to parse input body:", err.message);
+  log("Raw req.body:", JSON.stringify(req.body));
+  return JSON.stringify({ error: "Invalid input. Expecting JSON with 'inputText'" });
+}
 
   // Step 3: Call Gemini API
   let generatedText = "";
