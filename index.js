@@ -8,26 +8,23 @@ module.exports = async ({ req, log, error }) => {
   let inputText;
 
   try {
-    let payload = req.payload;
-
+    const payload = req.payload;
     if (!payload || payload.trim() === "") {
-      throw new Error("Empty request payload received");
+      throw new Error("Empty payload received");
     }
 
-    log("Raw payload:", payload);
-
     const body = JSON.parse(payload);
-    inputText = body?.inputText;
+    inputText = body.inputText;
 
     if (!inputText || typeof inputText !== "string") {
       throw new Error("Missing or invalid inputText");
     }
 
     log("Parsed inputText:", inputText);
-
   } catch (err) {
-    error("Failed to parse input payload:", err.message);
-    return JSON.stringify({ error: "Invalid payload. Expecting JSON with 'inputText'" });
+    error("Failed to parse payload:", err.message);
+    log("Raw req.payload:", req.payload);
+    return JSON.stringify({ error: "Invalid input. Expecting JSON with 'inputText'" });
   }
 
   if (!apiKey) {
@@ -36,7 +33,6 @@ module.exports = async ({ req, log, error }) => {
   }
 
   try {
-    log("Calling Gemini Flash API...");
     const geminiResponse = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
@@ -50,9 +46,8 @@ module.exports = async ({ req, log, error }) => {
     const generatedText =
       geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "No content generated.";
 
-    log("Gemini response received");
-
     const cleanOutput = generatedText.replace(/[^\x20-\x7E]+/g, '');
+
     return JSON.stringify({ output: cleanOutput });
 
   } catch (err) {
