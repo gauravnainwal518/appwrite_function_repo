@@ -56,13 +56,14 @@ module.exports = async ({ req, log, error }) => {
     return " Gemini API error occurred. Check logs for details.";
   }
 
-  // Step 4: Return clean response (string only, for Appwrite Console compatibility)
-  try {
-    const cleanOutput = generatedText.replace(/[^\x20-\x7E]+/g, ''); // remove non-printables
-    log(" Output sent:", cleanOutput);
-    return cleanOutput;
-  } catch (e) {
-    error(" Failed to clean output:", e.message);
-    return " Error while formatting output.";
-  }
-};
+ 
+// Step 4: Return clean response (stringified JSON)
+try {
+  const cleanOutput = generatedText.replace(/[^\x20-\x7E]+/g, ''); // remove non-printables
+  log(" Output sent:", cleanOutput);
+  return JSON.stringify({ output: cleanOutput });
+} catch (e) {
+  error(" Failed to clean output:", e.message);
+  return JSON.stringify({ error: "Error while formatting output." });
+}
+}
