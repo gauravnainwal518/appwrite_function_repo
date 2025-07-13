@@ -5,7 +5,6 @@ module.exports = async ({ req, res, log, error }) => {
 
   const apiKey = process.env.GEMINI_API_KEY;
 
-  // Origin checking (for Vercel frontend)
   const origin = req.headers.origin || "";
   const allowedOrigins = [
     "https://blog-platform-using-react.vercel.app"
@@ -14,16 +13,14 @@ module.exports = async ({ req, res, log, error }) => {
   const corsHeaders = {
     "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : "",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, x-appwrite-project, x-appwrite-function-variables"
+    "Access-Control-Allow-Headers": "Content-Type, X-Appwrite-Project"
   };
 
-  // Handle preflight CORS (OPTIONS method)
   if (req.method === "OPTIONS") {
     log("CORS preflight received");
     return res.send("", 204, corsHeaders);
   }
 
-  // Step 1: Parse request body
   let inputText;
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -43,13 +40,11 @@ module.exports = async ({ req, res, log, error }) => {
     );
   }
 
-  // Step 2: Check API key
   if (!apiKey) {
     error("Gemini API key is missing");
     return res.json({ error: "Gemini API key not configured" }, 500, corsHeaders);
   }
 
-  // Step 3: Call Gemini
   let generatedText = "";
   try {
     const geminiResponse = await axios.post(
@@ -69,7 +64,6 @@ module.exports = async ({ req, res, log, error }) => {
     return res.json({ error: "Gemini API error occurred" }, 500, corsHeaders);
   }
 
-  // Step 4: Return clean response
   try {
     const cleanOutput = generatedText.replace(/[^\x20-\x7E]+/g, '');
     log("Output sent:", cleanOutput);
