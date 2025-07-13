@@ -8,12 +8,12 @@ module.exports = async ({ req, log, error }) => {
   let inputText;
 
   try {
-    const payload = req.payload;
-    if (!payload || payload.trim() === "") {
-      throw new Error("Empty payload received");
-    }
+    const body = typeof req.body === 'string'
+      ? JSON.parse(req.body || '{}')
+      : req.body || {};
 
-    const body = JSON.parse(payload);
+    log("Raw req.body:", JSON.stringify(req.body));
+
     inputText = body.inputText;
 
     if (!inputText || typeof inputText !== "string") {
@@ -21,9 +21,9 @@ module.exports = async ({ req, log, error }) => {
     }
 
     log("Parsed inputText:", inputText);
+
   } catch (err) {
-    error("Failed to parse payload:", err.message);
-    log("Raw req.payload:", req.payload);
+    error("Failed to parse input body:", err.message);
     return JSON.stringify({ error: "Invalid input. Expecting JSON with 'inputText'" });
   }
 
