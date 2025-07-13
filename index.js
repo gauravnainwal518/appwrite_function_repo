@@ -1,39 +1,51 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  // Enhanced logging
-  log("Function execution started");
-  log("Request headers:", JSON.stringify(req.headers));
-  log("Raw body type:", typeof req.body);
-  log("Raw body content:", req.body);
+  // Enhanced debugging
+  log("--- NEW EXECUTION ---");
+  log("Headers received:", JSON.stringify(req.headers));
+  log("Raw body received:", req.body);
+  log("Body type:", typeof req.body);
 
   try {
-    // Validate body exists
-    if (!req.body) {
-      throw new Error("Request body is missing");
+    // Check for empty body first
+    if (!req.body || req.body === '') {
+      error("Empty body detected");
+      return res.json({ 
+        statusCode: 400,
+        error: "Request body cannot be empty",
+        receivedBody: req.body
+      });
     }
 
-    // Parse the incoming request
+    // Parse the request
     let parsedRequest;
     try {
-      // Handle both string and object bodies
+      // First parse the outer wrapper
       parsedRequest = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       
-      // Handle Appwrite function execution wrapper
+      // Then parse the inner data payload
       if (parsedRequest.data) {
         try {
           parsedRequest = JSON.parse(parsedRequest.data);
         } catch (innerError) {
-          throw new Error(`Failed to parse inner data: ${innerError.message}`);
+          error("Inner data parse error:", innerError);
+          throw new Error(`Invalid inner data format: ${innerError.message}`);
         }
       }
     } catch (parseError) {
-      throw new Error(`Invalid request format: ${parseError.message}`);
+      error("Parse error:", parseError);
+      return res.json({
+        statusCode: 400,
+        error: "Invalid request format",
+        details: parseError.message,
+        receivedBody: req.body
+      });
     }
 
-    log("Parsed request:", parsedRequest);
+    log("Successfully parsed request:", parsedRequest);
 
-    // Extract input text with multiple fallbacks
+    // Extract input text
     const inputText = parsedRequest.inputText || 
                      parsedRequest.text || 
                      (typeof parsedRequest === 'string' ? parsedRequest : null);
@@ -42,7 +54,7 @@ module.exports = async ({ req, res, log, error }) => {
       throw new Error("Missing or invalid input text");
     }
 
-    log("Processing input text (first 100 chars):", inputText.substring(0, 100));
+    log("Processing input:", inputText.substring(0, 100));
 
     // Verify API key
     const apiKey = process.env.GEMINI_API_KEY;
@@ -75,14 +87,9 @@ module.exports = async ({ req, res, log, error }) => {
     });
 
   } catch (err) {
-    error("Function execution failed:", err.message, err.stack);
-
-    // Determine appropriate status code
-    const statusCode = err.message.includes("Invalid") || 
-                      err.message.includes("Missing") ? 400 : 500;
-
+    error("Fatal error:", err.message, err.stack);
     return res.json({
-      statusCode: statusCode,
+      statusCode: err.message.includes("Invalid") ? 400 : 500,
       error: err.message,
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
