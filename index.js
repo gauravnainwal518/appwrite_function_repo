@@ -1,51 +1,13 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  log("--- NEW EXECUTION ---");
+  log(" NEW EXECUTION");
   log("Headers received:", JSON.stringify(req.headers));
-  log("Raw body received:", req.body);
-  log("Body type:", typeof req.body);
+  log("Parsed body received:", req.body);
 
   try {
-    // Check for empty body
-    if (!req.body || req.body === '') {
-      error("Empty body detected");
-      return res.json({
-        statusCode: 400,
-        error: "Request body cannot be empty",
-        receivedBody: req.body
-      });
-    }
+    const { inputText } = req.body || {};
 
-    // Parse the request
-    let parsedRequest;
-    try {
-      parsedRequest = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-
-      if (parsedRequest.data) {
-        try {
-          parsedRequest = JSON.parse(parsedRequest.data);
-        } catch (innerError) {
-          error("Inner data parse error:", innerError);
-          return res.json({
-            statusCode: 400,
-            error: `Invalid inner data format: ${innerError.message}`
-          });
-        }
-      }
-    } catch (parseError) {
-      error("Parse error:", parseError);
-      return res.json({
-        statusCode: 400,
-        error: "Invalid request format",
-        details: parseError.message,
-        receivedBody: req.body
-      });
-    }
-
-    log("Successfully parsed request:", parsedRequest);
-
-    const inputText = parsedRequest.inputText || parsedRequest.text;
     if (!inputText || typeof inputText !== 'string') {
       return res.json({
         statusCode: 400,
@@ -63,7 +25,6 @@ module.exports = async ({ req, res, log, error }) => {
       });
     }
 
-    // Call Gemini API
     let generatedText = null;
     try {
       const geminiResponse = await axios.post(
@@ -82,7 +43,6 @@ module.exports = async ({ req, res, log, error }) => {
       error("Gemini API Error:", apiError.message);
     }
 
-    //  Always return something
     return res.json({
       statusCode: 200,
       output: generatedText || "Sorry, I couldn’t generate a proper response. Please try again later."
