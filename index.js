@@ -1,12 +1,26 @@
 const axios = require('axios');
+const qs = require('querystring'); //  required to parse form-urlencoded
 
 module.exports = async ({ req, res, log, error }) => {
-  log(" NEW EXECUTION");
+  log(" NEW EXECUTION ");
   log("Headers received:", JSON.stringify(req.headers));
-  log("Parsed body received:", req.body);
+  log("Raw body received:", req.body);
 
   try {
-    const { inputText } = req.body || {};
+    const parsedQS = qs.parse(req.body.toString()); // parse data
+    let parsedRequest;
+
+    try {
+      parsedRequest = parsedQS.data ? JSON.parse(parsedQS.data) : {};
+    } catch (err) {
+      return res.json({
+        statusCode: 400,
+        error: "Invalid JSON in 'data' field",
+        details: err.message
+      });
+    }
+
+    const { inputText } = parsedRequest;
 
     if (!inputText || typeof inputText !== 'string') {
       return res.json({
@@ -15,7 +29,7 @@ module.exports = async ({ req, res, log, error }) => {
       });
     }
 
-    log("Processing input:", inputText.substring(0, 100));
+    log("Processing input:", inputText);
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
