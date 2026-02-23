@@ -11,13 +11,11 @@ module.exports = async ({ req, res, log, error }) => {
     log("Body value: " + JSON.stringify(raw));
 
     if (typeof raw === 'string') {
-      // Try URL-encoded: data=%7B%22inputText%22...
       const params = new URLSearchParams(raw);
       const dataField = params.get('data');
       if (dataField) {
         inputText = JSON.parse(dataField).inputText;
       } else {
-        // Try JSON string
         const outer = JSON.parse(raw);
         const inner = typeof outer.data === 'string' ? JSON.parse(outer.data) : outer;
         inputText = inner.inputText;
